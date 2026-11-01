@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+  :root{--az:#185FA5;--az2:#E6F1FB;--ok:#3B6D11;--ok2:#EAF3DE;--mal:#A32D2D;--mal2:#FCEBEB;--am:#854F0B;--am2:#FAEEDA;--tx:#222;--tx2:#5F5E5A;--bd:#D3D1C7;--bg:#F6F5F1}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:19px;line-height:1.45;color:var(--tx);background:var(--bg)}
+  .app{max-width:520px;margin:0 auto;padding:14px 14px 40px}
+  .pant{display:none}.pant.act{display:block}
+  h1{font-size:26px;margin:6px 0 12px;font-weight:600}
+  h2{font-size:21px;margin:18px 0 10px;font-weight:600}
+  .card{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;border-radius:12px;border:1px solid var(--bd);background:#fff;font-size:20px;color:var(--tx);margin:8px 0;cursor:pointer;font-family:inherit;padding:8px 12px}
+  .btn:active{transform:scale(.98)}
+  .pri{background:var(--az);color:#fff;border:none}
+  .fila{display:flex;gap:10px}.fila .btn{flex:1}
+  .chip{display:inline-block;padding:4px 12px;border-radius:20px;font-size:15px;background:var(--az2);color:var(--az)}
+  .chip.nv{background:var(--am2);color:var(--am)}
+  .sub{color:var(--tx2);font-size:16px}
+  .frase{font-size:27px;line-height:1.35;margin:10px 0 4px;font-weight:500}
+  .frase span.ok{color:var(--ok)}.frase span.mal{color:var(--mal);text-decoration:underline}
+  .es{font-size:18px;color:var(--tx2)}
+  .barra{height:8px;background:#E7E5DE;border-radius:4px;overflow:hidden}
+  .barra>div{height:100%;background:var(--az)}
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .top .barra{flex:1}
+  .x{border:none;background:none;font-size:30px;color:var(--tx2);padding:0 4px;cursor:pointer}
+  .opc{text-align:left;justify-content:flex-start;font-size:19px}
+  .opc.ok{background:var(--ok2);border-color:var(--ok);color:var(--ok)}
+  .opc.mal{background:var(--mal2);border-color:var(--mal);color:var(--mal)}
+  .palabras{display:flex;flex-wrap:wrap;gap:8px;min-height:54px}
+  .pal{padding:10px 14px;border-radius:10px;border:1px solid var(--bd);background:#fff;font-size:20px;cursor:pointer}
+  .pal.usada{visibility:hidden}
+  .resp{border:2px dashed var(--bd);border-radius:12px;padding:8px;margin-bottom:12px}
+  .nota{font-size:52px;font-weight:700;text-align:center;margin:6px 0}
+  .aviso{border-radius:12px;padding:12px;font-size:17px;margin:8px 0}
+  .av-ok{background:var(--ok2);color:var(--ok)}.av-mal{background:var(--mal2);color:var(--mal)}.av-am{background:var(--am2);color:var(--am)}.av-az{background:var(--az2);color:var(--az)}
+  .mic{min-height:84px;font-size:22px}
+  .mic.rec{background:var(--mal);animation:lat 1s infinite}
+  @keyframes lat{50%{opacity:.75}}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .met{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:12px}
+  .met b{display:block;font-size:30px}
+  .met small{font-size:15px;color:var(--tx2)}
+  .barras{display:flex;align-items:flex-end;gap:4px;height:110px;margin-top:8px}
+  .barras div{flex:1;background:var(--az);border-radius:3px 3px 0 0;min-height:2px}
+  .link{background:none;border:none;color:var(--az);font-size:17px;text-decoration:underline;padding:8px 0;cursor:pointer;font-family:inherit}
+  .carga{text-align:center;padding:60px 0;color:var(--tx2)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- INICIO -->
+  <section id="p-inicio" class="pant act">
+    <h1>English Coach</h1>
+    <div id="ini-cont" class="carga">Cargando…</div>
+  </section>
+
+  <!-- LECCIÓN -->
+  <section id="p-leccion" class="pant">
+    <div class="top">
+      <button class="x" onclick="salirLeccion()" aria-label="Salir">×</button>
+      <div class="barra"><div id="lec-barra" style="width:0"></div></div>
+      <span id="lec-num" class="sub"></span>
+    </div>
+    <div id="lec-cont"></div>
+  </section>
+
+  <!-- FIN -->
+  <section id="p-fin" class="pant">
+    <div id="fin-cont"></div>
+  </section>
+
+  <!-- PROGRESO -->
+  <section id="p-progreso" class="pant">
+    <div class="top"><button class="x" onclick="irInicio()" aria-label="Volver">←</button><h1 style="margin:0">Mi progreso</h1></div>
+    <div id="prog-cont" class="carga">Cargando…</div>
+  </section>
+
+</div>
+
+<script>
+/* ================== Estado ================== */
+var L = null;          // lección: {items, distractores, i, res:[], inicio, libre}
+var F = null;          // fase actual de la frase
+var VOZ = null;
+
+/* ================== Navegación ================== */
+function ver(id){
+  document.querySelectorAll('.pant').forEach(function(p){p.classList.remove('act')});
+  document.getElementById('p-'+id).classList.add('act');
+  window.scrollTo(0,0);
+}
+function irInicio(){ ver('inicio'); cargarInicio(); }
+function err(e){ alert('Error: ' + (e && e.message ? e.message : e)); }
+
+/* Conexión con el backend:
+   - dentro de Apps Script usa google.script.run
+   - publicada en GitHub Pages usa fetch a la URL /exec (necesaria para el micrófono) */
+var API_URL = 'PEGA-AQUI-LA-URL-EXEC-DE-APPS-SCRIPT';
+var EN_GAS = typeof google !== 'undefined' && google.script && google.script.run;
+function clave(){
+  var c = null;
+  try { c = localStorage.getItem('ec_clave'); } catch(x){}
+  if (!c){
+    c = prompt('Clave de la app (la que pusiste en Code.gs):') || '';
+    try { localStorage.setItem('ec_clave', c); } catch(x){}
+  }
+  return c;
+}
+function srv(fn, arg, ok, fail){
+  fail = fail || err;
+  if (EN_GAS){
+    var r = google.script.run.withSuccessHandler(ok || function(){}).withFailureHandler(fail);
+    arg === undefined ? r[fn]() : r[fn](arg);
+    return;
+  }
+  fetch(API_URL, {method:'POST', body:JSON.stringify({fn:fn, arg:arg, clave:clave()})})
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (j.ok) { if (ok) ok(j.data); return; }
+      if (/Clave/.test(j.error)) { try { localStorage.removeItem('ec_clave'); } catch(x){} }
+      fail(new Error(j.error));
+    })
+    .catch(function(e){ fail(new Error('Sin conexión con el servidor (' + e.message + ')')); });
+}
+
+/* ================== Inicio ================== */
+var LECCION_HOY = null;
+function cargarInicio(){
+  var c = document.getElementById('ini-cont');
+  c.className = 'carga'; c.innerHTML = 'Cargando…';
+  srv('getLeccionHoy', undefined, function(d){
+    LECCION_HOY = d;
+    var r = d.resumen, h = '';
+    c.className = '';
+    h += '<div class="card av-az" style="border:none"><div style="font-size:22px;font-weight:600">🔥 Racha: ' + r.racha + (r.racha===1?' día':' días') + '</div>';
+    h += '<div class="sub" style="color:inherit">Unidad ' + r.unidad + ': ' + esc(r.nombreUnidad) + '</div></div>';
+    if (d.items.length){
+      h += '<div class="card"><div style="font-size:20px">Lección de hoy</div>';
+      h += '<div class="sub">' + r.nuevas + (r.nuevas===1?' frase nueva':' frases nuevas') + ' · ' + r.repasos + (r.repasos===1?' repaso':' repasos') + ' · ~' + Math.max(3, Math.round(d.items.length*0.8)) + ' min</div></div>';
+      h += '<button class="btn pri" onclick="empezar(false)">▶ Empezar</button>';
+    } else {
+      h += '<div class="card av-ok" style="border:none">✅ Completaste lo de hoy. Mañana se desbloquean frases nuevas.</div>';
+      h += '<button class="btn" onclick="empezar(true)">Práctica extra</button>';
+    }
+    h += '<button class="btn" onclick="verProgreso()">📈 Mi progreso</button>';
+    h += '<button class="link" onclick="probarMic()">Probar micrófono</button><div id="mic-test"></div>';
+    h += '<div class="sub" style="text-align:center;margin-top:16px;font-size:13px">' + 'web v1.5 · servidor ' + (r.version || '') + '</div>';
+    c.innerHTML = h;
+  });
+}
+
+function empezar(libre){
+  var go = function(d){
+    if (!d.items.length){ alert('Aún no hay frases vistas para repasar.'); return; }
+    L = {items:d.items, distractores:d.distractores, i:0, res:[], inicio:Date.now(), libre:libre};
+    ver('leccion'); mostrarFrase();
+  };
+  if (libre) srv('getPracticaLibre', undefined, go); else go(LECCION_HOY);
+}
+function salirLeccion(){
+  if (L && L.res.length && confirm('¿Terminar ahora? Se guarda lo que ya hiciste.')) return terminar();
+  if (!L || !L.res.length) irInicio();
+}
+
+/* ================== Frase: fase escuchar ================== */
+function mostrarFrase(){
+  var it = L.items[L.i];
+  F = {it:it, escucha:null, habla:null, intentos:0, fase:'escuchar'};
+  document.getElementById('lec-barra').style.width = (L.i / L.items.length * 100) + '%';
+  document.getElementById('lec-num').textContent = (L.i+1) + '/' + L.items.length;
+  var h = cabecera(it);
+
+  if (it.nueva){
+    h += '<div class="sub">Frase nueva · escucha y lee</div>';
+    h += '<div class="frase">' + esc(it.en) + '</div><div class="es">' + esc(it.es) + '</div>';
+    h += botonesAudio();
+    h += '<button class="btn pri" onclick="faseHablar()">🎤 Ahora dilo tú</button>';
+  } else if (it.caja < 2){
+    h += '<div class="sub">Escucha: ¿qué significa?</div>' + botonesAudio();
+    var ops = mezclar([it.es].concat(distractores(it.es, 2)));
+    h += '<div id="ops">' + ops.map(function(o){
+      return '<button class="btn opc" data-ok="' + (o===it.es?1:0) + '" onclick="elegir(this)">' + esc(o) + '</button>';
+    }).join('') + '</div><div id="revela"></div>';
+  } else {
+    var pal = tokensVisibles(it.en);
+    F.objetivo = pal;
+    h += '<div class="sub">Escucha y ordena las palabras</div>' + botonesAudio();
+    h += '<div class="resp palabras" id="resp"></div>';
+    h += '<div class="palabras" id="banco">' + mezclar(pal.map(function(p,i){return {p:p,i:i}})).map(function(o){
+      return '<button class="pal" data-i="' + o.i + '" onclick="ponerPal(this)">' + esc(o.p) + '</button>';
+    }).join('') + '</div>';
+    h += '<button class="btn pri" onclick="comprobarOrden()">Comprobar</button><div id="revela"></div>';
+    F.elegidas = [];
+  }
+  document.getElementById('lec-cont').innerHTML = h;
+  setTimeout(function(){ hablarTTS(it.en, 0.85); }, 300);
+}
+function cabecera(it){
+  return '<div style="margin-bottom:6px"><span class="chip' + (it.nueva?' nv':'') + '">' + (it.nueva?'Nueva':'Repaso') +
+    '</span> <span class="sub">' + esc(it.nombreUnidad) + '</span></div>';
+}
+function botonesAudio(){
+  return '<div class="fila"><button class="btn" onclick="hablarTTS(F.it.en,0.85)">🔊 Escuchar</button>' +
+         '<button class="btn" onclick="hablarTTS(F.it.en,0.55)">🐢 Lento</button></div>';
+}
+function elegir(b){
+  var ok = b.dataset.ok === '1';
+  if (F.escucha === null) F.escucha = ok ? 100 : 0;
+  document.querySelectorAll('#ops .opc').forEach(function(x){
+    x.onclick = null;
+    if (x.dataset.ok==='1') x.classList.add('ok'); else if (x===b) x.classList.add('mal');
+  });
+  revelar(ok ? '¡Bien!' : 'Era esta:', ok);
+}
+function ponerPal(b){
+  if (b.classList.contains('usada')) return;
+  b.classList.add('usada');
+  F.elegidas.push(Number(b.dataset.i));
+  var r = document.createElement('button');
+  r.className = 'pal'; r.textContent = b.textContent;
+  r.onclick = function(){ var k = Array.prototype.indexOf.call(r.parentNode.children, r); F.elegidas.splice(k,1); r.remove(); b.classList.remove('usada'); };
+  document.getElementById('resp').appendChild(r);
+}
+function comprobarOrden(){
+  if (F.escucha !== null) return;
+  if (!F.elegidas.length){ alert('Toca las palabras en el orden que las escuchas.'); return; }
+  var dicho = F.elegidas.map(function(i){ return F.objetivo[i].toLowerCase(); });
+  var obj = F.objetivo.map(function(p){ return p.toLowerCase(); });
+  var m = alinear(obj, dicho);
+  F.escucha = Math.round(m.filter(Boolean).length / obj.length * 100);
+  document.querySelectorAll('#banco .pal, #resp .pal').forEach(function(x){ x.onclick = null; });
+  revelar(F.escucha >= 85 ? '¡Bien! ' + F.escucha + '%' : 'Comprensión ' + F.escucha + '%. La frase era:', F.escucha >= 85);
+}
+function revelar(titulo, ok){
+  document.getElementById('revela').innerHTML =
+    '<div class="aviso ' + (ok?'av-ok':'av-am') + '"><b>' + titulo + '</b><div class="frase" style="font-size:23px;color:var(--tx)">' + esc(F.it.en) + '</div>' +
+    '<div class="es">' + esc(F.it.es) + '</div></div>' +
+    '<button class="btn pri" onclick="faseHablar()">🎤 Ahora dilo tú</button>';
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+/* ================== Frase: fase hablar ================== */
+function faseHablar(){
+  F.fase = 'hablar';
+  var it = F.it, h = cabecera(it);
+  h += '<div class="sub">Escucha y repite en voz alta</div>';
+  h += '<div class="frase" id="h-frase">' + palabrasSpan(it.en, null) + '</div><div class="es">' + esc(it.es) + '</div>';
+  h += botonesAudio();
+  h += '<button class="btn pri mic" id="btn-mic" onclick="grabar()">🎤 Toca y habla</button>';
+  h += '<div id="h-res"></div>';
+  h += '<div class="fila"><button class="btn" onclick="siguiente()" id="btn-sig">Saltar</button></div>';
+  document.getElementById('lec-cont').innerHTML = h;
+  window.scrollTo(0,0);
+}
+
+var REC = null;
+function grabar(){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var res = document.getElementById('h-res');
+  if (!SR){ res.innerHTML = '<div class="aviso av-mal">Este navegador no reconoce voz. Abre la app en Chrome.</div>'; return; }
+  if (REC){ REC.stop(); return; }
+  speechSynthesis.cancel();
+  if (!MIC_OK){
+    res.innerHTML = '<div class="aviso av-az">Revisando el micrófono…</div>';
+    return diagnosticoMic(function(m){ if (m) avisoMic(res, m); else { res.innerHTML = ''; grabar(); } });
+  }
+  var b = document.getElementById('btn-mic');
+  REC = new SR();
+  REC.lang = 'en-US'; REC.interimResults = false; REC.maxAlternatives = 5;
+  var oyo = false;
+  REC.onstart = function(){ b.classList.add('rec'); b.innerHTML = '● Escuchando… (toca para parar)'; };
+  REC.onresult = function(e){
+    oyo = true;
+    var alts = [];
+    for (var k = 0; k < e.results[0].length; k++) alts.push(e.results[0][k].transcript);
+    evaluarHabla(alts);
+  };
+  REC.onerror = function(e){
+    var m = {'not-allowed':'El micrófono está bloqueado. Permite el micrófono para esta página en Chrome.',
+             'no-speech':'No te escuché. Acércate al celular e intenta de nuevo.',
+             'network':'Sin conexión: el reconocimiento de voz necesita internet.'}[e.error] || ('Error del micrófono: ' + e.error);
+    if (e.error === 'not-allowed') MIC_OK = false;
+    avisoMic(res, m);
+  };
+  REC.onend = function(){
+    REC = null; b.classList.remove('rec');
+    b.innerHTML = F.intentos ? '🎤 Intentar de nuevo' : '🎤 Toca y habla';
+  };
+  try { REC.start(); } catch(x){ REC = null; }
+}
+
+function evaluarHabla(alts){
+  var obj = normalizar(F.it.en), mejor = null;
+  alts.forEach(function(a){
+    var m = alinear(obj, normalizar(a)), p = Math.round(m.filter(Boolean).length / obj.length * 100);
+    if (!mejor || p > mejor.p) mejor = {p:p, m:m, txt:a};
+  });
+  F.intentos++;
+  F.habla = Math.max(F.habla || 0, mejor.p);
+  document.getElementById('h-frase').innerHTML = palabrasSpan(F.it.en, mejor.m);
+  var cls = mejor.p >= 85 ? 'av-ok' : mejor.p >= 60 ? 'av-am' : 'av-mal';
+  var color = mejor.p >= 85 ? 'var(--ok)' : mejor.p >= 60 ? 'var(--am)' : 'var(--mal)';
+  var h = '<div class="nota" style="color:' + color + '">' + mejor.p + '%</div>';
+  h += '<div class="sub" style="text-align:center">Entendí: “' + esc(mejor.txt) + '”</div>';
+  var fallas = obj.filter(function(w,i){ return !mejor.m[i]; });
+  if (fallas.length) h += '<div class="aviso ' + cls + '">' + consejo(fallas) + '</div>';
+  else h += '<div class="aviso av-ok">¡Perfecto! Se entendió todo.</div>';
+  if (F.intentos >= 3 || mejor.p >= 85) h += '';
+  document.getElementById('h-res').innerHTML = h;
+  var s = document.getElementById('btn-sig');
+  s.textContent = L.i + 1 < L.items.length ? 'Siguiente →' : 'Terminar';
+  s.className = 'btn pri';
+}
+
+function siguiente(){
+  if (REC){ try{REC.abort();}catch(x){} REC = null; }
+  var r = {id:F.it.id, escucha:F.escucha, habla:F.habla, nueva:F.it.nueva};
+  L.res.push(r);
+  srv('guardarResultado', r, null, function(e){ console.log(e); });
+  L.i++;
+  if (L.i < L.items.length) mostrarFrase(); else terminar();
+}
+
+/* ================== Fin ================== */
+function terminar(){
+  var esc_ = L.res.map(function(r){return r.escucha}).filter(function(v){return v!==null});
+  var hab = L.res.map(function(r){return r.habla}).filter(function(v){return v!==null});
+  var s = {frases:L.res.length, nuevas:L.res.filter(function(r){return r.nueva}).length,
+           escuchaProm:prom(esc_), hablaProm:prom(hab), segundos:(Date.now()-L.inicio)/1000};
+  ver('fin');
+  var c = document.getElementById('fin-cont');
+  c.innerHTML = '<h1>¡Lección terminada!</h1>' +
+    '<div class="grid">' +
+    met(s.frases, 'frases practicadas') + met(s.nuevas, 'frases nuevas') +
+    met(s.escuchaProm===null?'—':s.escuchaProm+'%', 'comprensión') + met(s.hablaProm===null?'—':s.hablaProm+'%', 'pronunciación') +
+    '</div><div id="fin-msg" class="carga">Guardando…</div>';
+  srv('cerrarSesion', s, function(p){
+    var t = p.tendencia, msg = evaluacion(p);
+    document.getElementById('fin-msg').outerHTML =
+      '<div class="aviso av-az">' + msg + '</div>' +
+      '<button class="btn pri" onclick="verProgreso()">📈 Ver mi progreso</button>' +
+      '<button class="btn" onclick="irInicio()">Volver al inicio</button>';
+  });
+  L = null;
+}
+
+/* ================== Progreso ================== */
+function verProgreso(){
+  ver('progreso');
+  var c = document.getElementById('prog-cont');
+  c.className = 'carga'; c.innerHTML = 'Cargando…';
+  srv('getProgreso', undefined, function(p){
+    c.className = '';
+    var t = p.tendencia, h = '';
+    h += '<div class="aviso av-az">' + evaluacion(p) + '</div>';
+    h += '<div class="grid">' +
+      met(p.racha, p.racha===1?'día de racha':'días de racha') +
+      met(p.dominadas + '<small>/' + p.totalFrases + '</small>', 'frases dominadas') +
+      met(fmt(t.hablaAhora) + flecha(t.hablaAhora, t.hablaAntes), 'pronunciación (7 días)') +
+      met(fmt(t.escuchaAhora) + flecha(t.escuchaAhora, t.escuchaAntes), 'comprensión (7 días)') +
+      '</div>';
+    if (p.dias.length){
+      h += '<h2>Pronunciación por día</h2><div class="card"><div class="barras">' +
+        p.dias.map(function(d){ return '<div title="' + d.fecha + '" style="height:' + (d.habla||0) + '%"></div>'; }).join('') +
+        '</div><div class="sub" style="display:flex;justify-content:space-between"><span>' + corta(p.dias[0].fecha) + '</span><span>' + corta(p.dias[p.dias.length-1].fecha) + '</span></div></div>';
+    }
+    h += '<h2>Unidades</h2>';
+    p.unidades.forEach(function(u){
+      var pct = Math.round(u.dominadas / u.total * 100);
+      h += '<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><span>' + u.unidad + '. ' + esc(u.nombre) + '</span><span class="sub">' + u.dominadas + '/' + u.total + '</span></div>' +
+           '<div class="barra" style="margin-top:8px"><div style="width:' + pct + '%"></div></div>' +
+           '<div class="sub" style="margin-top:4px">' + (u.vistas ? u.vistas + ' vistas · ' + u.tipo : 'Aún bloqueada · ' + u.tipo) + '</div></div>';
+    });
+    h += '<div class="sub" style="text-align:center;margin-top:10px">' + p.sesiones + ' sesiones · ' + p.minutosTotal + ' min en total</div>';
+    c.innerHTML = h;
+  });
+}
+function evaluacion(p){
+  var t = p.tendencia;
+  if (!p.sesiones) return 'Aún no hay sesiones. Haz tu primera lección.';
+  if (t.hablaAntes === null) return 'Vas bien. Con 2 semanas de práctica podré comparar si estás mejorando. Llevas ' + p.dominadas + ' frases dominadas.';
+  var d = t.hablaAhora - t.hablaAntes;
+  if (d >= 5) return '📈 Tu pronunciación mejoró ' + d + ' puntos respecto a la semana anterior.';
+  if (d <= -5) return 'Tu pronunciación bajó ' + (-d) + ' puntos. Prueba escuchar en lento antes de hablar.';
+  return 'Tu pronunciación está estable (' + t.hablaAhora + '%). Llevas ' + p.dominadas + ' frases dominadas.';
+}
+
+/* ================== Micrófono: diagnóstico y prueba ================== */
+var MIC_OK = false;
+/** Pide el micrófono explícitamente (fuerza la ventana de permiso) y explica por qué falla. cb(null) = OK */
+function diagnosticoMic(cb){
+  if (MIC_OK) return cb(null);
+  if (location.protocol === 'file:')
+    return cb('Abriste el archivo directo desde el computador (file://). Chrome no permite el micrófono así: ábrelo desde el link https de GitHub Pages.');
+  var enMarco = false;
+  try { enMarco = window.self !== window.top; } catch(x){ enMarco = true; }
+  if (enMarco)
+    return cb('Estás en el link de Apps Script: la página va dentro de un marco sin permiso de micrófono. Usa el link de GitHub Pages.');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+    return cb('Este navegador no da acceso al micrófono (o la página no es https). Usa Chrome con el link https.');
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){
+    s.getTracks().forEach(function(t){ t.stop(); });
+    MIC_OK = true; cb(null);
+  }).catch(function(e){
+    var m = {
+      NotAllowedError: 'Chrome tiene bloqueado el micrófono para este sitio. Toca el ícono a la izquierda de la dirección → Permisos (o Configuración del sitio) → Micrófono → Permitir, y recarga la página.',
+      NotFoundError: 'No se encontró ningún micrófono en este equipo.',
+      NotReadableError: 'Otra aplicación está usando el micrófono. Ciérrala e intenta de nuevo.'
+    }[e.name] || ('Error ' + e.name + ': ' + e.message);
+    if (e.name === 'NotAllowedError' && /Windows/.test(navigator.userAgent))
+      m += ' En Windows revisa también: Configuración → Privacidad y seguridad → Micrófono → activar para apps de escritorio.';
+    cb(m);
+  });
+}
+function avisoMic(el, m){
+  el.innerHTML = '<div class="aviso av-mal">' + m + '<div style="font-size:13px;margin-top:6px;opacity:.8">Página: ' + esc(location.href.slice(0, 60)) + '</div></div>';
+}
+function probarMic(){
+  var out = document.getElementById('mic-test');
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ out.innerHTML = '<div class="aviso av-mal">Este navegador no tiene reconocimiento de voz. Usa Chrome.</div>'; return; }
+  out.innerHTML = '<div class="aviso av-az">Revisando el micrófono…</div>';
+  diagnosticoMic(function(m){ if (m) avisoMic(out, m); else probarMic2(out, SR); });
+}
+function probarMic2(out, SR){
+  out.innerHTML = '<div class="aviso av-az">Di en inglés: <b>“Hello, how are you?”</b></div>';
+  var r = new SR(); r.lang = 'en-US';
+  r.onresult = function(e){ out.innerHTML = '<div class="aviso av-ok">✅ Micrófono OK. Entendí: “' + esc(e.results[0][0].transcript) + '”</div>'; };
+  r.onerror = function(e){ out.innerHTML = '<div class="aviso av-mal">❌ Falló: ' + e.error + (e.error==='not-allowed'?' (micrófono bloqueado en esta página)':'') + '</div>'; };
+  try { r.start(); } catch(x){ out.innerHTML = '<div class="aviso av-mal">❌ ' + x.message + '</div>'; }
+}
+
+/* ================== Voz (TTS) ================== */
+function elegirVoz(){
+  var vs = speechSynthesis.getVoices().filter(function(v){ return /^en[-_]US/i.test(v.lang); });
+  VOZ = vs.filter(function(v){ return /google/i.test(v.name); })[0] || vs[0] || null;
+}
+if (window.speechSynthesis){ elegirVoz(); speechSynthesis.onvoiceschanged = elegirVoz; }
+function hablarTTS(txt, rate){
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(txt);
+  u.lang = 'en-US'; u.rate = rate || 0.85;
+  if (VOZ) u.voice = VOZ;
+  speechSynthesis.speak(u);
+}
+
+/* ================== Evaluación de texto ================== */
+var CONTR = {"i'm":"i am","it's":"it is","don't":"do not","can't":"cannot","let's":"let us","i'll":"i will","you're":"you are",
+  "that's":"that is","what's":"what is","isn't":"is not","doesn't":"does not","won't":"will not","we're":"we are",
+  "there's":"there is","didn't":"did not","we'll":"we will","they're":"they are","aren't":"are not","i've":"i have"};
+var UNI = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+var DEC = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+function numPal(n){
+  n = Number(n);
+  if (n < 20) return UNI[n];
+  if (n < 100) return DEC[Math.floor(n/10)] + (n%10 ? ' ' + UNI[n%10] : '');
+  if (n < 1000) return UNI[Math.floor(n/100)] + ' hundred' + (n%100 ? ' ' + numPal(n%100) : '');
+  if (n < 10000) return numPal(Math.floor(n/1000)) + ' thousand' + (n%1000 ? ' ' + numPal(n%1000) : '');
+  return String(n);
+}
+function normalizar(s){
+  s = String(s).toLowerCase().replace(/[’`]/g, "'");
+  s = s.replace(/\b(\d{1,2}):(\d{2})\b/g, function(_, h, m){ return numPal(h) + (Number(m) ? ' ' + numPal(m) : ''); });
+  s = s.replace(/(\d+)\s*%/g, '$1 percent');
+  s = s.replace(/(\d+)\.(\d+)/g, function(_, a, b){ return numPal(a) + ' point ' + b.split('').map(numPal).join(' '); });
+  var out = [];
+  s.split(/[^a-z0-9']+/).forEach(function(t){
+    if (!t) return;
+    t = t.replace(/^'+|'+$/g, '');
+    if (CONTR[t]) t = CONTR[t];
+    else if (/^\d+$/.test(t)) t = numPal(t);
+    out.push(t.replace(/'/g, ''));
+  });
+  return out.join(' ').replace(/\bcan not\b/g, 'cannot').split(' ').filter(Boolean);
+}
+function parecida(a, b){
+  if (a === b) return true;
+  if (a.length < 5 || Math.abs(a.length - b.length) > 1) return false;
+  return lev(a, b) <= 1;
+}
+function lev(a, b){
+  var d = [], i, j;
+  for (i = 0; i <= a.length; i++){ d[i] = [i]; }
+  for (j = 1; j <= b.length; j++) d[0][j] = j;
+  for (i = 1; i <= a.length; i++) for (j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1] + (a[i-1]===b[j-1]?0:1));
+  return d[a.length][b.length];
+}
+/** LCS: devuelve, por cada palabra objetivo, si fue dicha (en orden). */
+function alinear(obj, dicho){
+  var n = obj.length, m = dicho.length, T = [], i, j;
+  for (i = 0; i <= n; i++){ T[i] = []; for (j = 0; j <= m; j++) T[i][j] = 0; }
+  for (i = n-1; i >= 0; i--) for (j = m-1; j >= 0; j--)
+    T[i][j] = parecida(obj[i], dicho[j]) ? 1 + T[i+1][j+1] : Math.max(T[i+1][j], T[i][j+1]);
+  var ok = obj.map(function(){ return false; }); i = 0; j = 0;
+  while (i < n && j < m){
+    if (parecida(obj[i], dicho[j])){ ok[i] = true; i++; j++; }
+    else if (T[i+1][j] >= T[i][j+1]) i++; else j++;
+  }
+  return ok;
+}
+/** Colorea la frase original según las palabras acertadas (normalizadas). */
+function palabrasSpan(en, marcas){
+  var vis = en.split(/\s+/);
+  if (!marcas) return vis.map(function(w){ return '<span>' + esc(w) + '</span>'; }).join(' ');
+  var k = 0;
+  return vis.map(function(w){
+    var n = normalizar(w).length, sub = marcas.slice(k, k + n); k += n;
+    var ok = sub.length && sub.every(Boolean);
+    return '<span class="' + (ok ? 'ok' : 'mal') + '">' + esc(w) + '</span>';
+  }).join(' ');
+}
+/** Consejos para hispanohablantes según las palabras que fallaron. */
+function consejo(fallas){
+  var t = [];
+  var tiene = function(re){ return fallas.some(function(w){ return re.test(w); }); };
+  if (tiene(/th/)) t.push('<b>th</b>: saca la punta de la lengua entre los dientes (three, the, thank).');
+  if (tiene(/^s[ptkclmnw]/)) t.push('No agregues “e” al inicio: di <b>stop</b>, no “estop”.');
+  if (tiene(/v/)) t.push('<b>v</b>: muerde suave el labio inferior, no la digas como b.');
+  if (tiene(/^h/)) t.push('<b>h</b>: suena como una j muy suave, un suspiro (help, how).');
+  if (tiene(/sh/)) t.push('<b>sh</b>: como pidiendo silencio “shh” (shift, shutdown).');
+  if (tiene(/ed$/)) t.push('Las terminaciones <b>-ed</b> casi no se pronuncian como sílaba (worked = “workt”).');
+  if (tiene(/^w|wh/)) t.push('<b>w</b>: redondea los labios como “gu” suave (work, what).');
+  var lista = fallas.slice(0, 5).map(function(w){ return '<b>' + esc(w) + '</b>'; }).join(', ');
+  return 'Fíjate en: ' + lista + (t.length ? '<div style="margin-top:6px">' + t.slice(0,2).join('<br>') + '</div>' : '') +
+    '<div style="margin-top:6px">Toca 🐢 Lento, escucha y repite.</div>';
+}
+
+/* ================== Utilidades ================== */
+function tokensVisibles(en){ return en.replace(/[.,?!]/g, '').split(/\s+/).filter(Boolean); }
+function distractores(correcta, n){
+  return mezclar(L.distractores.filter(function(d){ return d !== correcta; })).slice(0, n);
+}
+function mezclar(a){ a = a.slice(); for (var i = a.length-1; i > 0; i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function prom(a){ return a.length ? Math.round(a.reduce(function(x,y){return x+y},0) / a.length) : null; }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function met(v, l){ return '<div class="met"><b>' + v + '</b><small>' + l + '</small></div>'; }
+function fmt(v){ return v === null ? '—' : v + '%'; }
+function flecha(a, b){ if (a === null || b === null) return ''; var d = a - b; return d >= 3 ? ' <small style="color:var(--ok)">▲' + d + '</small>' : d <= -3 ? ' <small style="color:var(--mal)">▼' + (-d) + '</small>' : ''; }
+function corta(iso){ return iso.slice(8,10) + '/' + iso.slice(5,7); }
+
+cargarInicio();
+</script>
+</body>
+</html>
