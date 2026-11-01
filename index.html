@@ -101,7 +101,7 @@ function err(e){ alert('Error: ' + (e && e.message ? e.message : e)); }
 /* Conexión con el backend:
    - dentro de Apps Script usa google.script.run
    - publicada en GitHub Pages usa fetch a la URL /exec (necesaria para el micrófono) */
-var API_URL = 'PEGA-AQUI-LA-URL-EXEC-DE-APPS-SCRIPT';
+var API_URL = 'https://script.google.com/macros/s/AKfycbxxZfecpk4bgZzIaFQnBqKJY6Y19sfOvD7fKxy0hG27cKlI6gppUrHjHbOJBOY7qPcf/exec';
 var EN_GAS = typeof google !== 'undefined' && google.script && google.script.run;
 function clave(){
   var c = null;
