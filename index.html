@@ -150,7 +150,7 @@ function cargarInicio(){
     }
     h += '<button class="btn" onclick="verProgreso()">📈 Mi progreso</button>';
     h += '<button class="link" onclick="probarMic()">Probar micrófono</button><div id="mic-test"></div>';
-    h += '<div class="sub" style="text-align:center;margin-top:16px;font-size:13px">' + 'web v1.5 · servidor ' + (r.version || '') + '</div>';
+    h += '<div class="sub" style="text-align:center;margin-top:16px;font-size:13px">' + 'web v1.6 · servidor ' + (r.version || '') + '</div>';
     c.innerHTML = h;
   });
 }
@@ -253,6 +253,7 @@ function faseHablar(){
   h += '<div class="frase" id="h-frase">' + palabrasSpan(it.en, null) + '</div><div class="es">' + esc(it.es) + '</div>';
   h += botonesAudio();
   h += '<button class="btn pri mic" id="btn-mic" onclick="grabar()">🎤 Toca y habla</button>';
+  h += '<div id="h-vivo" class="sub" style="text-align:center;min-height:24px"></div>';
   h += '<div id="h-res"></div>';
   h += '<div class="fila"><button class="btn" onclick="siguiente()" id="btn-sig">Saltar</button></div>';
   document.getElementById('lec-cont').innerHTML = h;
@@ -264,35 +265,70 @@ function grabar(){
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var res = document.getElementById('h-res');
   if (!SR){ res.innerHTML = '<div class="aviso av-mal">Este navegador no reconoce voz. Abre la app en Chrome.</div>'; return; }
-  if (REC){ REC.stop(); return; }
+  if (REC){ finRec(true); return; }   // toca de nuevo: corta y evalúa lo escuchado
   speechSynthesis.cancel();
+  res.innerHTML = '';
   if (!MIC_OK){
     res.innerHTML = '<div class="aviso av-az">Revisando el micrófono…</div>';
     return diagnosticoMic(function(m){ if (m) avisoMic(res, m); else { res.innerHTML = ''; grabar(); } });
   }
   var b = document.getElementById('btn-mic');
-  REC = new SR();
-  REC.lang = 'en-US'; REC.interimResults = false; REC.maxAlternatives = 5;
-  var oyo = false;
-  REC.onstart = function(){ b.classList.add('rec'); b.innerHTML = '● Escuchando… (toca para parar)'; };
-  REC.onresult = function(e){
-    oyo = true;
-    var alts = [];
-    for (var k = 0; k < e.results[0].length; k++) alts.push(e.results[0][k].transcript);
-    evaluarHabla(alts);
+  var vivo = document.getElementById('h-vivo');
+  var rec = new SR();
+  REC = rec; REC_TXT = ''; REC_HECHO = false;
+  rec.lang = 'en-US'; rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 5;
+  b.classList.add('rec'); b.innerHTML = '● Escuchando… toca para terminar';
+  vivo.textContent = 'Habla ahora…';
+
+  rec.onresult = function(e){
+    if (REC !== rec) return;
+    for (var i = e.resultIndex; i < e.results.length; i++){
+      var r = e.results[i];
+      if (r.isFinal){
+        var alts = [];
+        for (var k = 0; k < r.length; k++) alts.push(r[k].transcript);
+        REC_HECHO = true;
+        evaluarHabla(alts);
+        finRec(false);
+        return;
+      }
+      REC_TXT = r[0].transcript;
+      vivo.textContent = 'Te escucho: “' + REC_TXT + '”';
+    }
   };
-  REC.onerror = function(e){
+  rec.onerror = function(e){
+    if (REC !== rec || e.error === 'aborted') return;
     var m = {'not-allowed':'El micrófono está bloqueado. Permite el micrófono para esta página en Chrome.',
-             'no-speech':'No te escuché. Acércate al celular e intenta de nuevo.',
+             'no-speech':'No te escuché. Habla más cerca del micrófono e intenta de nuevo.',
+             'audio-capture':'No llega audio del micrófono. Revisa que el equipo use el micrófono correcto.',
              'network':'Sin conexión: el reconocimiento de voz necesita internet.'}[e.error] || ('Error del micrófono: ' + e.error);
     if (e.error === 'not-allowed') MIC_OK = false;
+    finRec(false);
     avisoMic(res, m);
   };
-  REC.onend = function(){
-    REC = null; b.classList.remove('rec');
-    b.innerHTML = F.intentos ? '🎤 Intentar de nuevo' : '🎤 Toca y habla';
-  };
-  try { REC.start(); } catch(x){ REC = null; }
+  rec.onend = function(){ if (REC === rec) finRec(true); };
+  REC_TIMER = setTimeout(function(){ if (REC === rec) finRec(true, true); }, MAX_REC_MS);
+  try { rec.start(); } catch(x){ finRec(false); avisoMic(res, 'No se pudo iniciar el micrófono: ' + x.message); }
+}
+
+var REC_TXT = '', REC_HECHO = false, REC_TIMER = null, MAX_REC_MS = 10000;
+/** Termina la grabación sin esperar al navegador. Si conParcial, evalúa con lo que alcanzó a oír. */
+function finRec(conParcial, porTiempo){
+  clearTimeout(REC_TIMER);
+  var r = REC; REC = null;
+  if (r){ try { r.abort(); } catch(x){} }
+  var b = document.getElementById('btn-mic'), vivo = document.getElementById('h-vivo');
+  if (b){ b.classList.remove('rec'); b.innerHTML = '🎤 ' + (F && F.intentos ? 'Intentar de nuevo' : 'Toca y habla'); }
+  if (vivo) vivo.textContent = '';
+  if (!conParcial || REC_HECHO) return;
+  REC_HECHO = true;
+  if (REC_TXT){ evaluarHabla([REC_TXT]); if (b) b.innerHTML = '🎤 Intentar de nuevo'; }
+  else {
+    var res = document.getElementById('h-res');
+    if (res) avisoMic(res, porTiempo
+      ? 'No reconocí ninguna palabra en 10 segundos. Si estás en el PC, revisa en Windows cuál micrófono está activo (Configuración → Sistema → Sonido → Entrada).'
+      : 'No te escuché. Toca el micrófono, habla y espera un momento.');
+  }
 }
 
 function evaluarHabla(alts){
@@ -319,7 +355,7 @@ function evaluarHabla(alts){
 }
 
 function siguiente(){
-  if (REC){ try{REC.abort();}catch(x){} REC = null; }
+  if (REC){ REC_HECHO = true; finRec(false); }
   var r = {id:F.it.id, escucha:F.escucha, habla:F.habla, nueva:F.it.nueva};
   L.res.push(r);
   srv('guardarResultado', r, null, function(e){ console.log(e); });
@@ -429,11 +465,21 @@ function probarMic(){
   diagnosticoMic(function(m){ if (m) avisoMic(out, m); else probarMic2(out, SR); });
 }
 function probarMic2(out, SR){
-  out.innerHTML = '<div class="aviso av-az">Di en inglés: <b>“Hello, how are you?”</b></div>';
-  var r = new SR(); r.lang = 'en-US';
-  r.onresult = function(e){ out.innerHTML = '<div class="aviso av-ok">✅ Micrófono OK. Entendí: “' + esc(e.results[0][0].transcript) + '”</div>'; };
-  r.onerror = function(e){ out.innerHTML = '<div class="aviso av-mal">❌ Falló: ' + e.error + (e.error==='not-allowed'?' (micrófono bloqueado en esta página)':'') + '</div>'; };
-  try { r.start(); } catch(x){ out.innerHTML = '<div class="aviso av-mal">❌ ' + x.message + '</div>'; }
+  out.innerHTML = '<div class="aviso av-az">Di en inglés: <b>“Hello, how are you?”</b><div id="mt-vivo" style="margin-top:6px"></div></div>';
+  var r = new SR(), txt = '', listo = false;
+  r.lang = 'en-US'; r.interimResults = true;
+  var fin = function(html){ if (listo) return; listo = true; clearTimeout(t); try { r.abort(); } catch(x){} out.innerHTML = html; };
+  r.onresult = function(e){
+    var res = e.results[e.results.length - 1];
+    txt = res[0].transcript;
+    if (res.isFinal) fin('<div class="aviso av-ok">✅ Micrófono OK. Entendí: “' + esc(txt) + '”</div>');
+    else { var v = document.getElementById('mt-vivo'); if (v) v.textContent = 'Te escucho: “' + txt + '”'; }
+  };
+  r.onerror = function(e){ if (e.error !== 'aborted') fin('<div class="aviso av-mal">❌ Falló: ' + e.error + (e.error==='not-allowed'?' (micrófono bloqueado en esta página)':'') + '</div>'); };
+  r.onend = function(){ fin(txt ? '<div class="aviso av-ok">✅ Micrófono OK. Entendí: “' + esc(txt) + '”</div>'
+                               : '<div class="aviso av-mal">❌ No llegó voz. Habla más cerca o revisa qué micrófono usa el equipo.</div>'); };
+  var t = setTimeout(function(){ r.onend(); }, MAX_REC_MS);
+  try { r.start(); } catch(x){ fin('<div class="aviso av-mal">❌ ' + x.message + '</div>'); }
 }
 
 /* ================== Voz (TTS) ================== */
